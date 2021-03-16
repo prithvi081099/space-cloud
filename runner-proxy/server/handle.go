@@ -47,12 +47,17 @@ func (s *Server) handleProxy() http.HandlerFunc {
 
 		helpers.Logger.LogDebug(helpers.GetRequestID(ctx), fmt.Sprintf("Proxy is making request to host (%s) port (%s)", ogHost, ogPort), nil)
 
+		// get token from header
+		token, err := s.auth.CreateToken(ctx, map[string]interface{}{})
+		if err != nil {
+			_ = helpers.Response.SendErrorResponse(ctx, w, http.StatusServiceUnavailable, err)
+			return
+		}
+
 		// Update the ttl of cached deployment
 		id := fmt.Sprintf("%s-%s-%s", project, service, ogVersion)
 		exist := s.cache.GetDeployment(id)
 		if !exist {
-			// get token from header
-			token := utils.GetToken(r)
 
 			// makes http request to instruct driver to scale up
 			var vPtr interface{}
@@ -64,8 +69,7 @@ func (s *Server) handleProxy() http.HandlerFunc {
 
 			// Wait for the service to scale up
 			url = fmt.Sprintf("/v1/runner/%s/wait/%s/%s", project, service, ogVersion)
-			if err := utils.MakeHTTPRequest(ctx, "GET", url, token, "", map[string]interface{}{}, &vPtr)
-			; err != nil {
+			if err := utils.MakeHTTPRequest(ctx, "GET", url, token, "", map[string]interface{}{}, &vPtr); err != nil {
 				_ = helpers.Response.SendErrorResponse(ctx, w, http.StatusServiceUnavailable, err)
 				return
 			}

@@ -13,7 +13,7 @@ type Item struct {
 // TTLMap keeps track of which service was called at what time
 type TTLMap struct {
 	m map[string]*Item
-	l sync.Mutex
+	l sync.RWMutex
 }
 
 // Tick creates a TTLMap object and constantly check for outdated elements inside the object.
